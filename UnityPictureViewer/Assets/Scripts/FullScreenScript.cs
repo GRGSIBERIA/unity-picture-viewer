@@ -4,15 +4,16 @@ using UnityEngine;
 
 public class FullScreenScript : MonoBehaviour
 {
+    RectTransform pts;
+
+    RectTransform rts;
+
     // Start is called before the first frame update
     void Start()
     {
-        
-    }
+        rts = GetComponent<RectTransform>();
+        pts = rts.parent.GetComponent<RectTransform>();
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+        rts.sizeDelta = new Vector2(pts.rect.width, 0);
     }
 }
