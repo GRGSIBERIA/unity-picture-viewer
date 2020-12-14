@@ -145,20 +145,20 @@ public class ToggleSlidingScript : MonoBehaviour
     {
         var pos = rts.localPosition;
 
-        float hidePos = 0f;
+        float hidePos = windowFactor;
         switch (hiddenMode)
         {
             case HideDirection.Left:
-                hidePos = -canvasSize.x;
+                hidePos *= -canvasSize.x;
                 break;
             case HideDirection.Right:
-                hidePos = canvasSize.x;
+                hidePos *= canvasSize.x;
                 break;
             case HideDirection.Up:
-                hidePos = canvasSize.y;
+                hidePos *= canvasSize.y;
                 break;
             case HideDirection.Down:
-                hidePos = -canvasSize.y;
+                hidePos *= -canvasSize.y;
                 break;
         }
 
