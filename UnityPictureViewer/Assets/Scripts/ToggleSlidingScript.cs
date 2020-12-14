@@ -56,6 +56,7 @@ public class ToggleSlidingScript : MonoBehaviour
 
     float baseSign = 1f;
 
+    [SerializeField]
     bool isLeftRight = true;
 
     float defaultPosition;
@@ -83,10 +84,10 @@ public class ToggleSlidingScript : MonoBehaviour
                 baseSign = -1f;
                 break;
             case HideDirection.Up:
-                baseSign = 1f;
+                baseSign = -1f;
                 break;
             case HideDirection.Down:
-                baseSign = -1f;
+                baseSign = 1f;
                 break;
         }
     }
@@ -177,7 +178,11 @@ public class ToggleSlidingScript : MonoBehaviour
     void Update()
     {
         // キャンバスの大きさが変更されたら移動量が変更される
-        canvasSize = canvasSize != pts.rect.size ? pts.rect.size : canvasSize;
+        if (canvasSize != pts.rect.size)
+        {
+            canvasSize = pts.rect.size;
+            rts.sizeDelta = canvasSize;
+        }
 
         if (isSliding)
         {
