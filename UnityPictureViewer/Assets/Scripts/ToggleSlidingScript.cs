@@ -9,32 +9,8 @@ using UnityEngine;
 public class ToggleSlidingScript : MonoBehaviour
 {
     /// <summary>
-    /// 移動速度 [pixel/s]
+    /// 隠れる方向
     /// </summary>
-    [SerializeField]
-    float speed = 10f;
-
-    RectTransform pts;
-    RectTransform rts;
-
-    /// <summary>
-    /// 画面に対する窓幅の係数 [0.1, 1.0]
-    /// </summary>
-    [SerializeField]
-    float windowFactor = 1f;
-
-    [SerializeField]
-    bool isSliding = false;
-
-    bool isHidding = true;
-
-    /// <summary>
-    /// キャンバスサイズの変更を検知する変数
-    /// </summary>
-    Vector2 canvasSize;
-
-    float totalDisplacement = 0f;
-
     public enum HideDirection
     {
         Left,
@@ -46,9 +22,45 @@ public class ToggleSlidingScript : MonoBehaviour
     [SerializeField]
     HideDirection hiddenMode = HideDirection.Left;
 
+    /// <summary>
+    /// 移動速度 [pixel/s]
+    /// </summary>
+    [SerializeField, Header("Public Field")]
+    float speed = 10f;
+
+    /// <summary>
+    /// 画面に対する窓幅の係数 [0.1, 1.0]
+    /// </summary>
+    [SerializeField]
+    float windowFactor = 1f;
+
+    [SerializeField, Header("Debbuging Field")]
+    bool isSliding = false;
+
+    [SerializeField]
+    float totalDisplacement = 0f;
+
+    /// <summary>
+    /// キャンバスサイズの変更を検知する変数
+    /// </summary>
+    Vector2 canvasSize;
+
+    RectTransform pts;
+
+    RectTransform rts;
+
+    /// <summary>
+    /// 文脈上，逆の意味になっているかもしれないので取り扱い注意
+    /// </summary>
+    bool isHidding = true;
+
     float baseSign = 1f;
 
     bool isLeftRight = true;
+
+    float defaultPosition;
+
+    float movedPosition;
 
     // Start is called before the first frame update
     void Start()
@@ -96,16 +108,69 @@ public class ToggleSlidingScript : MonoBehaviour
     /// 一定の変位を超えたら自動的にストップさせる
     /// </summary>
     /// <param name="displacement">変位量</param>
-    /// <param name="canvasValue">キャンバスの大きさ</param>
-    void JudgeStopMove(float displacement, float canvasValue)
+    /// <returns>StopするならTrue</returns>
+    bool IsStopMoving(float displacement)
     {
         totalDisplacement += Mathf.Abs(displacement);
+        float canvasValue = isLeftRight ? canvasSize.x : canvasSize.y;
+
         if (totalDisplacement > canvasValue * windowFactor)
         {
-            isSliding = false;
-            isHidding = !isHidding;
-            totalDisplacement = 0f;
+            return true;
         }
+        return false;
+    }
+
+    float ComputeDisplacement()
+    {
+        var pos = rts.localPosition;
+        float displacement = 0f;
+
+        if (isLeftRight)
+        {
+            displacement = MovePosition(canvasSize.x);
+            pos.x += displacement;
+        }
+        else
+        {
+            displacement = MovePosition(canvasSize.y);
+            pos.y += displacement;
+        }
+        rts.localPosition = pos;
+        
+        return displacement;
+    }
+
+    void ResetPosition()
+    {
+        var pos = rts.localPosition;
+
+        float hidePos = 0f;
+        switch (hiddenMode)
+        {
+            case HideDirection.Left:
+                hidePos = -canvasSize.x;
+                break;
+            case HideDirection.Right:
+                hidePos = canvasSize.x;
+                break;
+            case HideDirection.Up:
+                hidePos = canvasSize.y;
+                break;
+            case HideDirection.Down:
+                hidePos = -canvasSize.y;
+                break;
+        }
+
+        if (isLeftRight)
+        {
+            pos.x = isHidding ? 0f : hidePos;
+        }
+        else
+        {
+            pos.y = isHidding ? 0f : hidePos;
+        }
+        rts.localPosition = pos;
     }
 
     // Update is called once per frame
@@ -116,24 +181,17 @@ public class ToggleSlidingScript : MonoBehaviour
 
         if (isSliding)
         {
-            // それぞれ上下左右で与えるパラメータが異なるからx, yをそれぞれ真逆にしないように注意する
-            if (isLeftRight)
-            {   // 左右に水平移動
-                var pos = rts.position;
-                var displacement = MovePosition(canvasSize.x);
-                pos.x += displacement;
-                rts.position = pos;
+            // このフレームでの変位を知りたい
+            float displacement = ComputeDisplacement();
 
-                JudgeStopMove(displacement, canvasSize.x);
-            }
-            else
-            {   // 上下に水平移動
-                var pos = rts.position;
-                var displacement = MovePosition(canvasSize.y);
-                pos.y += displacement;
-                rts.position = pos;
+            if (IsStopMoving(displacement))
+            {
+                // もし，止まるなら必要な値で初期化する
+                ResetPosition();
 
-                JudgeStopMove(displacement, canvasSize.y);  
+                isSliding = false;
+                isHidding = !isHidding;
+                totalDisplacement = 0f;
             }
         }
     }
