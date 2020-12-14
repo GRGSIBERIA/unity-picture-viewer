@@ -2,38 +2,53 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// 何かしらのアクションによってスライディングしながらトグルするコンポーネント
+/// ストレッチされていることが前提
+/// </summary>
 public class ToggleSlidingScript : MonoBehaviour
 {
     /// <summary>
     /// 移動速度 [pixel/s]
     /// </summary>
     [SerializeField]
-    float speed;
+    float speed = 10f;
+
+    RectTransform pts;
+    RectTransform rts;
+
+    /// <summary>
+    /// 画面に対する窓幅の係数 [0.1, 1.0]
+    /// </summary>
+    [SerializeField]
+    float windowFactor = 1f;
+
+    [SerializeField]
+    bool isSliding = false;
+
+    bool isHidding = true;
+
+    /// <summary>
+    /// キャンバスサイズの変更を検知する変数
+    /// </summary>
+    Vector2 canvasSize;
+
+    float totalDisplacement = 0f;
 
     public enum HideDirection
     {
         Left,
         Right,
-        Top,
-        Bottom
+        Up,
+        Down
     }
 
     [SerializeField]
-    HideDirection hiddenDirection = HideDirection.Left;
+    HideDirection hiddenMode = HideDirection.Left;
 
-    RectTransform pts;
-    RectTransform rts;
+    float baseSign = 1f;
 
-    Vector3 dir;
-
-    Vector3 size;
-
-    [SerializeField]
-    float windowFactor = 1f;
-
-    bool isSliding = false;
-
-    bool isHidding = true;
+    bool isLeftRight = true;
 
     // Start is called before the first frame update
     void Start()
@@ -41,51 +56,85 @@ public class ToggleSlidingScript : MonoBehaviour
         rts = GetComponent<RectTransform>();
         pts = rts.parent.GetComponent<RectTransform>();
 
-        // 隠れる向きをここで決める
-        switch (hiddenDirection)
+        if (!(hiddenMode == HideDirection.Left || hiddenMode == HideDirection.Right))
         {
-            case HideDirection.Bottom:
-                dir = Vector3.down;
-                break;
-            case HideDirection.Top:
-                dir = Vector3.up;
-                break;
-            case HideDirection.Left:
-                dir = Vector3.left;
-                break;
-            case HideDirection.Right:
-                dir = Vector3.right;
-                break;
-            default:
-                throw new UnityEngine.UnityException("Not selected hiddenDirection.");
+            isLeftRight = false;
         }
 
-        // これをやっておかないと奥行きがなくなる
-        size = pts.rect.size;
-        size.z = 1f;
-
-        // デフォルトで隠れている場合は，その座標に表示する
-        if (isHidding)
+        // 基本的な移動向きを決める
+        switch (hiddenMode)
         {
-            rts.position = Vector3.Scale(dir, size) * windowFactor;
+            case HideDirection.Left:
+                baseSign = 1f;
+                break;
+            case HideDirection.Right:
+                baseSign = -1f;
+                break;
+            case HideDirection.Up:
+                baseSign = 1f;
+                break;
+            case HideDirection.Down:
+                baseSign = -1f;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// 変位の量を決める
+    /// </summary>
+    /// <param name="cv">キャンバスのサイズ，上下左右でx,yが異なる</param>
+    /// <returns>変位 [px/s]</returns>
+    float MovePosition(float cv)
+    {
+        // 移動する向きを決める
+        float sign = (isHidding ? 1f : -1f) * baseSign;
+
+        return sign * cv * speed * Time.deltaTime;
+    }
+
+    /// <summary>
+    /// 一定の変位を超えたら自動的にストップさせる
+    /// </summary>
+    /// <param name="displacement">変位量</param>
+    /// <param name="canvasValue">キャンバスの大きさ</param>
+    void JudgeStopMove(float displacement, float canvasValue)
+    {
+        totalDisplacement += Mathf.Abs(displacement);
+        if (totalDisplacement > canvasValue * windowFactor)
+        {
+            isSliding = false;
+            isHidding = !isHidding;
+            totalDisplacement = 0f;
         }
     }
 
     // Update is called once per frame
     void Update()
     {
-        Vector3 canvasSize = rts.rect.size;
-        canvasSize.z = 1f;
-
-        // スクリーンの大きさが変更された
-        if (size != canvasSize)
-            size = canvasSize;
+        // キャンバスの大きさが変更されたら移動量が変更される
+        canvasSize = canvasSize != pts.rect.size ? pts.rect.size : canvasSize;
 
         if (isSliding)
         {
-            Vector3 hidedir = isHidding ? dir : -dir;
+            // それぞれ上下左右で与えるパラメータが異なるからx, yをそれぞれ真逆にしないように注意する
+            if (isLeftRight)
+            {   // 左右に水平移動
+                var pos = rts.position;
+                var displacement = MovePosition(canvasSize.x);
+                pos.x += displacement;
+                rts.position = pos;
 
-            rts.position += Vector3.Scale(hidedir, size) * Time.deltaTime;
+                JudgeStopMove(displacement, canvasSize.x);
+            }
+            else
+            {   // 上下に水平移動
+                var pos = rts.position;
+                var displacement = MovePosition(canvasSize.y);
+                pos.y += displacement;
+                rts.position = pos;
+
+                JudgeStopMove(displacement, canvasSize.y);  
+            }
         }
     }
 
