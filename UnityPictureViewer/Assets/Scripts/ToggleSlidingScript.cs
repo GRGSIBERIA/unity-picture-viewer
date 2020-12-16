@@ -213,4 +213,13 @@ public class ToggleSlidingScript : MonoBehaviour
         // 窓係数が0.1を下回るようだったらAssertを出すようにしておく
         UnityEngine.Assertions.Assert.IsTrue(this.windowFactor > 0.1f, "WindowFactor is not over 0.1f. Window Factor completely hides from canvas under 0.1f.");
     }
+
+    /// <summary>
+    /// スライド開始を通知する
+    /// isSlidingは永続的にfalseが設定される
+    /// </summary>
+    public void NoticeSlideAction()
+    {
+        this.isSliding = true;
+    }
 }
